@@ -285,6 +285,7 @@ export default {
 	detectCheck,
 	doesLineAttackSquare,
 	isPlayerInCheck,
+	isSquareBeingAttacked
 };
 
 export type {
