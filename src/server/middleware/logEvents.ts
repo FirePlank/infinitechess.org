@@ -2,17 +2,17 @@ import { format } from 'date-fns';
 import { v4 as uuid } from 'uuid';
 import { promises as fsPromises } from 'fs';
 import path from 'path';
+import fs from 'fs';
 
 // @ts-ignore
 import { getClientIP } from '../utility/IP.js';
 import socketUtility, { CustomWebSocket } from '../socket/socketUtility.js';
-// @ts-ignore
-import { ensureDirectoryExists } from '../utility/fileUtils.js';
 
 import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
+import type { IncomingMessage } from 'node:http';
 
 const giveLoggedItemsUUID = false;
 
@@ -33,7 +33,7 @@ async function logEvents(message: string, logName: string): Promise<void> {
 
 	try {
 		const logsPath = path.join(__dirname, '..', '..', '..', 'logs');
-		ensureDirectoryExists(logsPath);
+		fs.mkdirSync(logsPath, { recursive: true });
 		await fsPromises.appendFile(path.join(logsPath, logName), logItem);
 	} catch (err: unknown) {
 		if (err instanceof Error) console.error(`Error logging event: ${err.message}`);
@@ -80,7 +80,7 @@ function reqLogger(req: Request, res: Response, next: () => void): void {
  * @param req - The request object
  * @param ws - The websocket object
  */
-function logWebsocketStart(req: Request, ws: CustomWebSocket): void {
+function logWebsocketStart(req: IncomingMessage, ws: CustomWebSocket): void {
 	const socketID = ws.metadata.id;
 	const stringifiedSocketMetadata = socketUtility.stringifySocketMetadata(ws);
 	const userAgent = req.headers['user-agent'];

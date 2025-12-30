@@ -4,6 +4,8 @@
  * This script handles socket upgrade connection requests, and creating new sockets.
  */
 
+import 'dotenv/config'; // Imports all properties of process.env, if it exists
+
 import socketUtility from './socketUtility.js';
 import { sendSocketMessage } from './sendSocketMessage.js';
 import {
@@ -18,7 +20,7 @@ import { onclose } from './closeSocket.js';
 import { verifyJWTWebSocket } from '../middleware/verifyJWT.js';
 import { getMemberDataByCriteria } from '../database/memberManager.js';
 // @ts-ignore
-import { DEV_BUILD, GAME_VERSION } from '../config/config.js';
+import { GAME_VERSION } from '../config/config.js';
 // @ts-ignore
 import { rateLimitWebSocket } from '../middleware/rateLimit.js';
 // @ts-ignore
@@ -30,13 +32,13 @@ import { executeSafely } from '../utility/errorGuard.js';
 
 import type WebSocket from 'ws';
 import type { CustomWebSocket } from './socketUtility.js';
-import type { Request } from 'express';
+import type { IncomingMessage } from 'http';
 
 // Variables ---------------------------------------------------------------------------
 
 // Functions ---------------------------------------------------------------------------
 
-function onConnectionRequest(socket: WebSocket, req: Request): void {
+function onConnectionRequest(socket: WebSocket, req: IncomingMessage): void {
 	const ws = closeIfInvalidAndAddMetadata(socket, req);
 	if (ws === undefined) return; // We will have already closed the socket
 
@@ -100,7 +102,7 @@ function onConnectionRequest(socket: WebSocket, req: Request): void {
 
 function closeIfInvalidAndAddMetadata(
 	socket: WebSocket,
-	req: Request,
+	req: IncomingMessage,
 ): CustomWebSocket | undefined {
 	// Make sure the connection is secure https
 	const origin = req.headers.origin;
@@ -113,8 +115,8 @@ function closeIfInvalidAndAddMetadata(
 	}
 
 	// Make sure the origin is our website
-	if (!DEV_BUILD && origin !== process.env['APP_BASE_URL']) {
-		// In DEV_BUILD, allow all origins.
+	// In DEV_BUILD, allow all origins.
+	if (process.env['NODE_ENV'] !== 'development' && origin !== process.env['APP_BASE_URL']) {
 		logEvents(
 			`WebSocket connection request rejected. Reason: Origin Error. "Origin: ${origin}"   Should be: "${process.env['APP_BASE_URL']}"`,
 			'hackLog.txt',
@@ -132,7 +134,7 @@ function closeIfInvalidAndAddMetadata(
 
 	const cookies = socketUtility.getCookiesFromWebsocket(req);
 	if (cookies['browser-id'] === undefined) {
-		console.log(`Authentication needed for WebSocket connection request!! Socket:`);
+		console.log(`Authentication needed for WebSocket connection request!!`);
 		socket.close(1008, 'Authentication needed'); // Code 1008 is Policy Violation
 		return;
 	}
@@ -157,21 +159,21 @@ function closeIfInvalidAndAddMetadata(
 /**
  * Adds the 'message', 'close', and 'error' event listeners to the socket
  */
-function addListenersToSocket(req: Request, ws: CustomWebSocket): void {
-	ws.on('message', (message) => {
+function addListenersToSocket(req: IncomingMessage, ws: CustomWebSocket): void {
+	ws.on('message', (message: Buffer<ArrayBufferLike>) => {
 		executeSafely(
-			onmessage,
+			() => onmessage(req, ws, message),
 			'Error caught within websocket on-message event:',
-			req,
-			ws,
-			message,
 		);
 	});
 	ws.on('close', (code, reason) => {
-		executeSafely(onclose, 'Error caught within websocket on-close event:', ws, code, reason);
+		executeSafely(
+			() => onclose(ws, code, reason),
+			'Error caught within websocket on-close event:',
+		);
 	});
 	ws.on('error', (error) => {
-		executeSafely(onerror, 'Error caught within websocket on-error event:', ws, error);
+		executeSafely(() => onerror(ws, error), 'Error caught within websocket on-error event:');
 	});
 }
 
