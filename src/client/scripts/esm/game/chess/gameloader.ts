@@ -439,7 +439,7 @@ async function startCustomDualEngineGame(options: {
 		allowEditCoords: false,
 		additional: {
 			variantOptions: options.additional.variantOptions,
-			worldBorder: engineWorldBorderDict['hydrochess'],
+			worldBorderDist: engineWorldBorderDict['hydrochess'],
 		},
 	});
 
