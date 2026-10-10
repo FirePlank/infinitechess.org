@@ -107,13 +107,11 @@ to move, the position before the last move, and the last move.
   1,936 sets of up to 3 white pieces, and the 7,558 of 9,688 sets of 4 his slower search finished.
   It covers neither huygens, roses, royal centaurs or royal queens, nor black pieces. For those, the
   site's verification of every mate is the independent check.
-- **Bigger bounded boards add no mates without a huygen:** every bounded draw was searched on 9x9
-  and 10x10 with the window covering the whole board and the mated royal on every square, and found
-  no mate that 8x8 or a large board's edge lacks. P vs rq,rq,rq and RQ vs rq,rq,rq were left out, as
-  they can't mate on any board: every royal queen either side checks can capture the checker
-  straight back, or attacks it, making the position illegal. Every mate against a large board's edge
-  or corner (3,426, up to 4 pieces) or on an open board (1,759) also mates on 8x8, except 7 that
-  need a huygen far out along an open side.
+- **Bigger bounded boards add no mates without a huygen:** every bounded draw not proven by hand was
+  searched on 9x9 and 10x10 with the window covering the whole board and the mated royal on every
+  square, and found no mate that 8x8 or a large board's edge lacks. Every mate against a large
+  board's edge or corner (3,426, up to 4 pieces) or on an open board (1,759) also mates on 8x8,
+  except 7 that need a huygen far out along an open side.
 - **8x8-only mates:** 216 sets mate on 8x8 but against no large board's edge or corner, all with a
   royal queen, whose escape lines a small board cuts short. The first was two amazons vs a royal
   queen (`b 1,8,1,8 rq1,3|AM3,3|AM3,8`).
