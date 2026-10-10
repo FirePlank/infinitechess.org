@@ -57,11 +57,12 @@ const RANGE = 2n ** 54n;
  * more clusters in {@link RANGE}; fresh jitter breaks an accidental alignment the last one made.
  */
 const ATTEMPTS: { unit: bigint; seed: number }[] = [
-	{ unit: 2n ** 44n, seed: 1 },
-	{ unit: 2n ** 44n, seed: 2 },
-	{ unit: 2n ** 40n, seed: 3 },
-	{ unit: 2n ** 36n, seed: 4 },
-	{ unit: 2n ** 33n, seed: 5 },
+	{ unit: 2n ** 40n, seed: 1 },
+	{ unit: 2n ** 40n, seed: 2 },
+	{ unit: 2n ** 34n, seed: 3 },
+	{ unit: 2n ** 28n, seed: 4 },
+	{ unit: 2n ** 22n, seed: 5 },
+	{ unit: 2n ** 16n, seed: 6 },
 ];
 
 // Functions -------------------------------------------------------------------

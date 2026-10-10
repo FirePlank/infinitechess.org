@@ -32,6 +32,9 @@ export type Layout = { x: Float64Array; y: Float64Array };
  */
 const MODERATE_GAP_SLACK = 20n;
 
+/** The most units a layout may reach below home; more outgrows the solver's precision. */
+const MAX_REACH_UNITS = 2n ** 22n;
+
 /** A prime below 2^26, so a product of two residues stays exact in a double. */
 const RANK_PRIME = 67108859;
 
@@ -58,7 +61,7 @@ function lay(
 	random: () => number,
 ): Layout | undefined {
 	const { clusters } = clustering;
-	const model = new ModelBuilder(clusters.length, Number(reach / unit));
+	const model = new ModelBuilder(clusters.length, Number(bimath.min(reach / unit, MAX_REACH_UNITS))); // prettier-ignore
 
 	model.fix(home);
 	for (const link of independentLinks(forms, clustering.links, home, clusters.length)) {

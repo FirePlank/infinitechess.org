@@ -2,9 +2,9 @@
 
 /**
  * Maps the engine's moves on a compressed position back onto the original board. A capture lands
- * on its victim and a short move keeps its offset; a long slide lands as near every piece's line
- * as the compressed landing does. Each landing is then checked against every piece, so a line is
- * only ever shown up to its last faithfully mapped move.
+ * on its victim and a move short under every form keeps its offset; a long slide lands as near
+ * every piece's line as the compressed landing does. Each landing is then checked against every
+ * piece, so a line is only ever shown up to its last faithfully mapped move.
  */
 
 import type { LineForm } from './lineforms.js';
@@ -90,7 +90,7 @@ function liftMove(context: LiftContext, board: LiftBoard, token: string): string
 	if (!piece) return undefined;
 	const victim = board.get(coordutil.getKeyFromCoords(endCoords));
 	const delta = coordutil.subtractCoords(endCoords, startCoords);
-	const isShort = delta.every((d) => bimath.abs(d) <= enginehorizons.EXACT_SPAN);
+	const isShort = context.forms.every((form) => bimath.abs(lineforms.value(form, delta)) <= enginehorizons.EXACT_SPAN); // prettier-ignore
 
 	const endOriginal = victim
 		? victim.original
@@ -144,8 +144,9 @@ function slideLanding(
 }
 
 /**
- * Whether the original landing sits on the same residue, and as near every other piece's line as
- * the compressed one: nearness is all the engine reads of a landing far from where the piece left.
+ * Whether the original landing sits on the same residue, as near every other piece's line as the
+ * compressed one, and on the same side of every piece it shares a line with: nearness, and order
+ * along a line for blocks, pins and checks, are what the engine reads of a far landing.
  */
 function keepsRelations(
 	context: LiftContext,
@@ -157,12 +158,25 @@ function keepsRelations(
 ): boolean {
 	if (endCompressed.some((v, axis) => (v - endOriginal[axis]!) % lineforms.ORIGIN_GRID !== 0n)) return false; // prettier-ignore
 	const landing: Required<SquareValues> = { original: formValues(context.forms, endOriginal), compressed: formValues(context.forms, endCompressed) }; // prettier-ignore
-	return forEachNear(context, board, [mover, victim], landing, (f, original, compressed) => {
-		const originalOffset = landing.original.exact[f]! - original;
-		const compressedOffset = landing.compressed.exact[f]! - compressed;
-		const isNear = bimath.abs(originalOffset) <= enginehorizons.NEAR_LINE_SPAN || bimath.abs(compressedOffset) <= enginehorizons.NEAR_LINE_SPAN; // prettier-ignore
-		return !isNear || originalOffset === compressedOffset;
-	});
+	return forEachNear(
+		context,
+		board,
+		[mover, victim],
+		landing,
+		(f, original, compressed, other) => {
+			const originalOffset = landing.original.exact[f]! - original;
+			const compressedOffset = landing.compressed.exact[f]! - compressed;
+			const isNear = bimath.abs(originalOffset) <= enginehorizons.NEAR_LINE_SPAN || bimath.abs(compressedOffset) <= enginehorizons.NEAR_LINE_SPAN; // prettier-ignore
+			if (isNear && originalOffset !== compressedOffset) return false;
+			return originalOffset !== 0n || other === undefined || isSameSideAlong(context.forms[f]!, endOriginal, other.original, endCompressed, other.compressed); // prettier-ignore
+		},
+	);
+}
+
+/** Whether `a` lies the same way from `b` along their shared line of `form` as `a2` from `b2`. */
+function isSameSideAlong(form: LineForm, a: Coords, b: Coords, a2: Coords, b2: Coords): boolean {
+	const axis = form.b === 0n ? 1 : 0; // A file runs along y, every other line along x.
+	return a[axis] > b[axis] === a2[axis] > b2[axis];
 }
 
 /**
@@ -175,13 +189,13 @@ function forEachNear(
 	board: LiftBoard,
 	excluded: (LiftPiece | undefined)[],
 	landing: SquareValues,
-	visit: (form: number, original: bigint, compressed: bigint) => boolean,
+	visit: (form: number, original: bigint, compressed: bigint, other?: LiftPiece) => boolean,
 ): boolean {
 	for (const other of board.values()) {
 		if (excluded.includes(other)) continue;
 		const { original, compressed } = valuesOf(context, other);
 		for (let f = 0; f < context.forms.length; f++) {
-			if (mayBeNear(landing, f, original.approx[f]!, compressed.approx[f]!) && !visit(f, original.exact[f]!, compressed.exact[f]!)) return false; // prettier-ignore
+			if (mayBeNear(landing, f, original.approx[f]!, compressed.approx[f]!) && !visit(f, original.exact[f]!, compressed.exact[f]!, other)) return false; // prettier-ignore
 		}
 	}
 	for (const line of context.lines) {

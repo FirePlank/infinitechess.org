@@ -8,10 +8,12 @@
 // Constants -------------------------------------------------------------------
 
 /**
- * The furthest the engine reads a distance between two squares: its king rays drop any piece at
- * i32::MAX or further. Every eval threshold (Amazon tropism, at 1788, is the widest) sits far inside.
+ * Past the furthest the engine reads a distance between two squares: its TT's move box around the
+ * origin (±4096), a capped ray's quiet candidates (1024 steps, so at most 5120 under any form)
+ * and every eval radius (Amazon tropism, at 1788, is the widest). Needs an engine whose king rays
+ * see a piece at any distance.
  */
-const EXACT_SPAN = 2n ** 31n;
+const EXACT_SPAN = 2n ** 14n;
 
 /**
  * How near a third piece's line a far crossing must pass for the engine to notice: no line offset

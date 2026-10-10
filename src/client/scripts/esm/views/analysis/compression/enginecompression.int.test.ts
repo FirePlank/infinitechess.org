@@ -61,8 +61,9 @@ function seeded(seed: number): () => number {
 }
 
 /**
- * A home army around the origin plus far pieces, each aligned with a piece or scattered, at distances
- * up to `maxExponent` digits. `forks` adds three far pieces whose lines meet at one far empty square.
+ * A home army around the origin plus far pieces, each aligned with a piece or scattered, from 5
+ * up to `maxExponent` digits away. `forks` adds three far pieces whose lines meet at one far empty
+ * square.
  */
 function randomPosition(
 	random: () => number,
@@ -73,7 +74,7 @@ function randomPosition(
 	const int = (low: number, high: number): number =>
 		low + Math.floor(random() * (high - low + 1));
 	const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)]!;
-	const far = (): bigint => BigInt(int(1, 9)) * 10n ** BigInt(int(11, maxExponent)) + BigInt(int(-20, 20)) * (random() < 0.5 ? -1n : 1n); // prettier-ignore
+	const far = (): bigint => BigInt(int(1, 9)) * 10n ** BigInt(int(4, maxExponent)) + BigInt(int(-20, 20)) * (random() < 0.5 ? -1n : 1n); // prettier-ignore
 	const sign = (): bigint => (random() < 0.5 ? -1n : 1n);
 
 	const pieces: Piece[] = [
