@@ -34,14 +34,6 @@ to move, the position before the last move, and the last move.
 - **Caps:** 5 pieces unbounded, 4 bounded, counting both sides and the royals.
 - **Search window:** pieces are placed within 6 squares of the mated royal on unbounded boards, 7 on
   bounded ones (all of 8x8 fits), plus faraway huygen squares.
-- **Faraway huygens:** every distance falls into one of 104 patterns of which window squares lie at
-  a prime distance (174 on bounded boards). Each pattern's stand-in is a distance past 5 radii, the
-  farthest a defender moving from the window can land on the line, with none of those landing
-  squares a prime distance away: nothing beyond the window captures or blocks it then but a piece
-  sliding along its line, as at any distance. Every pattern possible far out has such distances (all
-  below 3,000,000); the few that only occur at the window's edge keep those distances. Faraway
-  huygens on one line never block each other, and a witness spaces them so. A lone mated king needs
-  only the 4 patterns that hit 1 or 2 of its 3x3 squares and nothing else.
 - **Checkmate:** as on the site. Some royal is in check, and no move leaves every royal safe. Any
   number of royals (king, royal centaur, royal queen) per side.
 - **Reachability:** some attacker move could have produced the mate from a position where no
@@ -55,6 +47,14 @@ to move, the position before the last move, and the last move.
   sets may mate another way.
 - **Pawns** stay pawns. The attacker's last move may be a double step or en passant. A defender pawn
   never double steps, as a mate can do without its rights, and pawn files are ignored.
+- **Faraway huygens:** every distance falls into one of 104 patterns of which window squares lie at
+  a prime distance (174 on bounded boards). Each pattern's stand-in is a distance past 5 radii, the
+  farthest a defender moving from the window can land on the line, with none of those landing
+  squares a prime distance away: nothing beyond the window captures or blocks it then but a piece
+  sliding along its line, as at any distance. Every pattern possible far out has such distances (all
+  below 3,000,000); the few that only occur at the window's edge keep those distances. Faraway
+  huygens on one line never block each other, and a witness spaces them so. A lone mated king needs
+  only the 4 patterns that hit 1 or 2 of its 3x3 squares and nothing else.
 - **Bounded boards:** a set counts as mating if it mates on any square of an 8x8 board, or, with a
   huygen, with the mated royal near one edge or a corner of a large board (each wall 0-6 squares
   away, the other directions open). Such mates count for every bounded board. Layouts that are
