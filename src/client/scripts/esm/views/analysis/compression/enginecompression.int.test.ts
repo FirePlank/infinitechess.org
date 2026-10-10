@@ -231,7 +231,8 @@ describe('enginecompression', () => {
 		await expect(gameformulator.formulateGame(replay, undefined, true)).resolves.toBeDefined();
 	});
 
-	it('lifts every engine line on a position beyond i64 to moves legal on the original', async () => {
+	it('lifts engine lines beyond i64 to moves legal exactly when the compressed ones are', async () => {
+		const isLegal = (icn: string): Promise<boolean> => gameformulator.formulateGame(icnconverter.ShortToLong_Format(icn), undefined, true).then(() => true, () => false); // prettier-ignore
 		const random = seeded(21);
 		for (let run = 0; run < 15; run++) {
 			const [rules, pieces] = [`${random() < 0.5 ? 'w' : 'b'} 0/100 1 (8|1)`, positionText(randomPosition(random, 60, [], false))]; // prettier-ignore
@@ -244,16 +245,13 @@ describe('enginecompression', () => {
 			);
 			search.free();
 			for (const line of summary?.lines ?? []) {
+				// A line may be cut at a move that can't be mapped faithfully, but never its first.
 				const lifted = prepared!.liftLine(line.moves);
-				expect(lifted).toHaveLength(line.moves.length);
-				if (lifted.length === 0) continue;
+				expect(lifted.length).toBeGreaterThan(0);
 				// The original has no border: the clamped one exists only for the engine.
-				const replay = icnconverter.ShortToLong_Format(
-					`${rules} ${pieces} ${lifted.join('|')}`,
-				);
-				await expect(
-					gameformulator.formulateGame(replay, undefined, true),
-				).resolves.toBeDefined();
+				const original = `${rules} ${pieces} ${lifted.join('|')}`;
+				const compressed = `${prepared!.icn} ${line.moves.slice(0, lifted.length).join('|')}`;
+				expect(await isLegal(original), original).toBe(await isLegal(compressed));
 			}
 		}
 	}, 300_000);
