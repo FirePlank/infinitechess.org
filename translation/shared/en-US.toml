@@ -167,6 +167,10 @@ message = "The engine doesn't support this variant."
 label = "Unsupported win rule"
 message = "The engine doesn't support this win condition."
 
+[position_errors.engine.too_many_pieces]
+label = "Too many pieces"
+message = "The engine doesn't support this many pieces."
+
 [position_errors.engine.unsupported_piece]
 label = "Unsupported piece"
 message = "The engine doesn't support one of these pieces."

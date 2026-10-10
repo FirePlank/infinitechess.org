@@ -16,6 +16,7 @@ import bimath from '../../util/math/bimath.js';
 import bounds from '../../util/math/bounds.js';
 import boardutil from '../logic/boardutil.js';
 import apeironborder from '../logic/apeironborder.js';
+import variantmodule from '../logic/variantmodule.js';
 import typeutil, { RawType, rawTypes as r } from '../util/typeutil.js';
 
 // Types -----------------------------------------------------------------------
@@ -24,6 +25,7 @@ import typeutil, { RawType, rawTypes as r } from '../util/typeutil.js';
 export type EngineSupportCode =
 	| 'unsupported_variant'
 	| 'unsupported_win_rule'
+	| 'too_many_pieces'
 	| 'unsupported_piece'
 	| 'border_too_large'
 	| 'out_of_bounds';
@@ -33,10 +35,8 @@ type SupportedResult = { supported: true } | { supported: false; reason: EngineS
 // Constants -------------------------------------------------------------------
 
 /**
- * Variants the engine can't use: the 4D ones it can't replay, and Omega³/Omega⁴, whose thousands
- * of pieces make it too slow to be of any use. Every other variant must declare `getPositionBox`,
- * unless it declares a `worldBorder` of its own — `apeironborder.forVariant` has no other way to
- * space a border around it, and throws if neither is present.
+ * Variants the engine doesn't support, by name, for callers that must know before a variant loads.
+ * The rules below never read it; enginevariants.unit.test.ts keeps the two in agreement.
  */
 const UNSUPPORTED_VARIANTS: Set<VariantCode> = new Set([
 	'4x4x4x4_Chess',
@@ -59,7 +59,10 @@ const SUPPORTED_WIN_CONDITIONS: GameruleWinCondition[] = ['checkmate', 'royalcap
 /** Piece types the engine can move. Neutrals (void/obstacle) are inert blockers, so allowed. */
 const SUPPORTED_PIECES: Set<RawType> = new Set([r.VOID, r.OBSTACLE, r.KING, r.GIRAFFE, r.CAMEL, r.ZEBRA, r.KNIGHTRIDER, r.AMAZON, r.QUEEN, r.HAWK, r.CHANCELLOR, r.ARCHBISHOP, r.CENTAUR, r.ROYALCENTAUR, r.ROSE, r.KNIGHT, r.GUARD, r.HUYGEN, r.ROOK, r.BISHOP, r.PAWN]); // prettier-ignore
 
-// Individual rule checks (shared by both entry points) ------------------------
+/** Most pieces a position may hold before the engine is too slow to be of any use. */
+const MAX_PIECES = 10_000;
+
+// Individual rule checks ------------------------------------------------------
 
 /** Only checkmate-family win conditions are understood. */
 function checkWinConditions(gameRules: GameRules): SupportedResult {
@@ -68,6 +71,12 @@ function checkWinConditions(gameRules: GameRules): SupportedResult {
 		if (!SUPPORTED_WIN_CONDITIONS.includes(winCondition))
 			return { supported: false, reason: 'unsupported_win_rule' };
 	}
+	return { supported: true };
+}
+
+/** No more than {@link MAX_PIECES} pieces. */
+function checkPieceCount(count: number): SupportedResult {
+	if (count > MAX_PIECES) return { supported: false, reason: 'too_many_pieces' };
 	return { supported: true };
 }
 
@@ -122,13 +131,13 @@ function isPlaySupported(gamefile: GameFile): SupportedResult {
 }
 
 /**
- * Game-level support that's independent of any single position's piece set: the variant's movement
- * rules (4D ones the engine can't replay) and win conditions. Unlike {@link isPlaySupported} these
- * require no bounded board — the analysis engine handles out-of-range coordinates itself
+ * Game-level support that's independent of any single position's piece set: the variant's custom
+ * piece movement (4D) the engine can't replay, and win conditions. Unlike {@link isPlaySupported}
+ * these require no bounded board — the analysis engine handles out-of-range coordinates itself
  * (blocking/re-basing).
  */
 function checkGameRules(gamefile: GameFile): SupportedResult {
-	if (gamefile.variant !== undefined && UNSUPPORTED_VARIANTS.has(gamefile.variant.code))
+	if (variantmodule.hasCustomMovement(gamefile.variant?.mod))
 		return { supported: false, reason: 'unsupported_variant' };
 
 	return checkWinConditions(gamefile.gameRules);
@@ -136,13 +145,16 @@ function checkGameRules(gamefile: GameFile): SupportedResult {
 
 /**
  * Whether the engine can analyze the CURRENTLY VIEWED position (analysis-board local eval).
- * The piece types checked are the current board's — a capture can bring a position that
- * was unplayable (an unsupported piece) back into range, so we don't disqualify a game
- * for something at another ply. Out-of-bounds is handled separately by the caller.
+ * The piece count and types checked are the current board's — a capture can bring a position that
+ * was unplayable (too many pieces / an unsupported piece) back into range, so we don't disqualify
+ * a game for something at another ply. Out-of-bounds is handled separately by the caller.
  */
 function isAnalysisSupported(gamefile: GameFile): SupportedResult {
 	const gameRulesResult = checkGameRules(gamefile);
 	if (!gameRulesResult.supported) return gameRulesResult;
+
+	const pieceCountResult = checkPieceCount(gamefile.pieces.coords.size);
+	if (!pieceCountResult.supported) return pieceCountResult;
 
 	const allRawTypes = new Set<RawType>();
 	for (const idx of gamefile.pieces.coords.values()) {
@@ -154,13 +166,17 @@ function isAnalysisSupported(gamefile: GameFile): SupportedResult {
 
 /**
  * Whether the engine can review the WHOLE game (Game Review evaluates every mainline position).
- * Uses every piece type that appears across the game (start pieces plus promotion targets).
+ * Uses the STARTING position's piece count — the maximum, since pieces only ever decrease — and
+ * every piece type that appears across the game (start pieces plus promotion targets).
  * Out-of-bounds positions are NOT disqualifying: the review skips those individually (pieces
  * can return in range), which is why this deliberately performs no world-border check.
  */
 function isGameReviewSupported(gamefile: GameFile): SupportedResult {
 	const gameRulesResult = checkGameRules(gamefile);
 	if (!gameRulesResult.supported) return gameRulesResult;
+
+	const pieceCountResult = checkPieceCount(gamefile.startSnapshot.position.size);
+	if (!pieceCountResult.supported) return pieceCountResult;
 
 	return checkPieceTypes(gamefile.existingRawTypes);
 }
