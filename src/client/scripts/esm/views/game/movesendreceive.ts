@@ -149,8 +149,9 @@ function checkAndReportIllegalOpponentMove(
 	console.log(`Buddy made an illegal play: "${tokenMove}". Reason: ${moveValidationResult.reason} Move number: ${moveNumber}`); // prettier-ignore
 
 	if (gamesession.getRole() === undefined) return; // Spectators never report
-	if (window.gamePageData.engineGame) return; // If the engine plays an illegal move, we already force it to resign.
-	if (servervalidation.isGameValidated(window.gamePageData.variant, gamefile.variant)) return; // Server-validated game
+	const validated = servervalidation.isGameValidated(window.gamePageData.variant, gamefile.variant); // prettier-ignore
+	const engineGame = window.gamePageData.engineGame !== undefined;
+	if (!servervalidation.isGameReportable(validated, engineGame)) return;
 
 	reportOpponentsMove(moveValidationResult.reason);
 }
