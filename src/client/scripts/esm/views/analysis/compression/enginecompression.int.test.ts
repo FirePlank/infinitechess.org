@@ -211,6 +211,26 @@ describe('enginecompression', () => {
 		}
 	}, 300_000);
 
+	it('maps a long diagonal slide to a crossing set by a compressed gap', () => {
+		// The black bishop sits 20008 ranks above the army, so its diagonals cross the
+		// archbishop's 10009 squares out: a short-looking move whose crossing is compressed.
+		expectSameLegalMoves(`b 0/100 1 (9|-10) -10,${CAP},-${CAP},${CAP} K60000000000000,40000000000000|k59999999999994,40000000000003|B59999999999998,40000000000008|B59999999999994,40000000000004|R60000000000004,39999999999996|R60000000000001,39999999999993|P59999999999993,40000000000000|am60000000000000,39999999999997|ar59999999999997,39999999999993|P59999999999994,39999999999998|r60000000000001,40000000000000|r59999999999999,40000000000002|b59999999999994,40000000020008|Q59999999999997,5039999999999986`); // prettier-ignore
+	});
+
+	it('cuts a line at a slide that would pass a piece it blocks in the compression', async () => {
+		// Black's queen checks along the king's diagonal, then white's far rook slides onto it:
+		// beyond the queen on the original, so no block, but between her and the king compressed.
+		const position = `b 0/100 1 (8|1) K0,0|k-2,4|r-8,1|Q6,6|R7,-3|N-3,-3|R90000000000000000000000000000000000000000000000000000015,-999999999999999999999999999999999999999999999999981|q600000000000000000000000000000000007,-899999999999999999999999999999987`; // prettier-ignore
+		const prepared = enginecompression.prepare(position.replace('(8|1) ', `(8|1) ${CAPPED_BORDER} `), CAP)!; // prettier-ignore
+		const squares = [...icnconverter.ShortToLong_Format(prepared.icn).position!.keys()].map((key) => key.split(',').map(BigInt) as [bigint, bigint]); // prettier-ignore
+		const [rook, queen] = [squares.at(-2)!, squares.at(-1)!];
+		const line = [`${queen[0]},${queen[1]}>${queen[0]},${-queen[0]}`, `${rook[0]},${rook[1]}>${-rook[1]},${rook[1]}`]; // prettier-ignore
+		const lifted = prepared.liftLine(line);
+		expect(lifted.length).toBeGreaterThan(0);
+		const replay = icnconverter.ShortToLong_Format(`${position} ${lifted.join('|')}`);
+		await expect(gameformulator.formulateGame(replay, undefined, true)).resolves.toBeDefined();
+	});
+
 	it('lifts every engine line on a position beyond i64 to moves legal on the original', async () => {
 		const random = seeded(21);
 		for (let run = 0; run < 15; run++) {
