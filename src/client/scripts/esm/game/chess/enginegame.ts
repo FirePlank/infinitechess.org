@@ -290,9 +290,10 @@ function requestGeneratedMoves(gamefile: GameFile): void {
  * (SharedArrayBuffer); without it the engine runs single-threaded. Apeiron below its top
  * level searches on one thread, so a pool there would only hold idle workers.
  */
-function getEngineThreadCount(engine: EngineAndConfig): number {
-	const maxLevel = engineregistry.REGISTRY[engine.name].maxStrengthLevel;
-	if (engine.name === 'apeiron' && engine.config.strengthLevel < maxLevel) return 1;
+function getEngineThreadCount(engineAndConfig: EngineAndConfig): number {
+	const maxLevel = engineregistry.REGISTRY[engineAndConfig.name].maxStrengthLevel;
+	if (engineAndConfig.name === 'apeiron' && engineAndConfig.config.strengthLevel < maxLevel)
+		return 1;
 	return enginewasm.defaultThreads(1);
 }
 
