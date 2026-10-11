@@ -291,6 +291,13 @@ function abandonSearch(): void {
 	analyzed = undefined;
 }
 
+/** Stops the engine (keeps the worker warm). */
+function stopAnalysis(): void {
+	interruptSearch();
+	send({ cmd: 'stop' });
+	notifyStatus();
+}
+
 // Legal-moves helper worker ---------------------------------------------------
 
 /** Lazily spins up the idle helper worker that answers legal-moves queries (no thread pool — it never searches). */
@@ -624,13 +631,6 @@ function retargetCachedUpdate(update: CevalUpdate): CevalUpdate {
 
 function areAllLinesConclusive(lines: CevalLine[]): boolean {
 	return lines.length > 0 && lines.every((line) => line.mate !== undefined);
-}
-
-/** Stops the engine (keeps the worker warm). */
-function stopAnalysis(): void {
-	interruptSearch();
-	send({ cmd: 'stop' });
-	notifyStatus();
 }
 
 function restartWorkerForSearch(): void {
