@@ -17,6 +17,7 @@ import type { GameStateMessage } from '../../../shared/transport/clientbound.js'
 
 import typeutil from '../../../shared/chess/util/typeutil.js';
 import moveutil from '../../../shared/chess/logic/moveutil.js';
+import servervalidation from '../../../shared/chess/variants/servervalidation.js';
 
 import chat from './chat.js';
 import logEvents from '../../utility/logEvents.js';
@@ -32,7 +33,6 @@ import gameStateBuilder from './gameStateBuilder.js';
  * that move and aborts the game; an invalid one is refused and logged to hackLog.
  */
 function onReport(servergame: ServerGame, ourRole: Player, messageContents: ReportMessage): void {
-	if (gameUtility.isEngineGame(servergame)) return;
 	console.log('Received cheat report! - Check hackLog.txt for more details.');
 
 	const opponentColor = typeutil.invertPlayer(ourRole);
@@ -49,9 +49,8 @@ function onReport(servergame: ServerGame, ourRole: Player, messageContents: Repo
 		return;
 	}
 
-	// Cheat reports are only valid in games that are not instantly deleted on conclusion.
-	// (i.e. games without server-side move validation AND are public)
-	if (servergame.validateMoves) {
+	const engineGame = gameUtility.isEngineGame(servergame);
+	if (!servervalidation.isGameReportable(servergame.validateMoves, engineGame)) {
 		const errString = `Player tried to report cheating in a game that doesn't support cheat reports. Variant: ${gameUtility.getVariantCode(servergame.match.variant) ?? 'Custom'}. Report message: ${logEvents.truncate(JSON.stringify(messageContents))}. Reporter color: ${ourRole}. Game ID: ${servergame.match.id}`;
 		logEvents.add(errString, 'hackLog');
 		gameSockets.sendToColor(

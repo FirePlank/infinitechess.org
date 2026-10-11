@@ -5,6 +5,7 @@
  */
 
 import type { GameFile } from '../../../../shared/chess/logic/gamefile.js';
+import type { VariantCode } from '../../../../shared/chess/util/variantcodes.js';
 import type {
 	MetaData,
 	Rating,
@@ -15,7 +16,6 @@ import timeutil from '../../../../shared/util/timeutil.js';
 import winconutil from '../../../../shared/chess/util/winconutil.js';
 import metadatautil from '../../../../shared/chess/util/metadatautil.js';
 import variantregistry from '../../../../shared/chess/variants/variantregistry.js';
-import { VariantCode } from '../../../../shared/chess/util/variantcodes.js';
 
 // Functions -------------------------------------------------------------------
 
@@ -23,14 +23,11 @@ import { VariantCode } from '../../../../shared/chess/util/variantcodes.js';
  * Builds a {@link MetaData} on demand from a loaded
  * gamefile's properties, for serializing the game to ICN.
  *
- * Player identity (`White`/`Black`/elos) is NOT represented — the client gamefile
- * does not store it; the authoritative, complete ICN comes from the server.
+ * Omits the {@link metadatautil.RECORD_METADATA} tags, which the gamefile does not store.
  */
 function buildMetaDataFromGamefile(gamefile: GameFile): MetaData {
 	const { UTCDate, UTCTime } = timeutil.convertTimestampToUTCDateUTCTime(gamefile.dateTimestamp);
 	const metadata: MetaData = {
-		Site: 'https://www.infinitechess.org/',
-		Round: '-',
 		TimeControl: gamefile.timeControl,
 		UTCDate,
 		UTCTime,
