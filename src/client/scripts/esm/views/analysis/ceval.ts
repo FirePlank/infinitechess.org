@@ -283,6 +283,14 @@ function interruptSearch(): void {
 	if (search) analysisworker.interrupt(search);
 }
 
+/** Ends the in-flight search for good (an interrupt alone resumes it), dropping its tail info. */
+function abandonSearch(): void {
+	interruptSearch();
+	send({ cmd: 'stop' });
+	activeRequestId++;
+	analyzed = undefined;
+}
+
 // Legal-moves helper worker ---------------------------------------------------
 
 /** Lazily spins up the idle helper worker that answers legal-moves queries (no thread pool — it never searches). */
@@ -498,12 +506,7 @@ function refreshAnalysis(force = false, options: RefreshAnalysisOptions = {}): v
 	// This position crashed the engine too many times — never send it again (that just re-crashes
 	// the worker). Checked ahead of the spawn below, so a dead position never costs a wasm load.
 	if (isPositionDead(icn)) {
-		// As the cached branch below: stop the prior search for good and drop its tail,
-		// or it resumes and its updates land on this dead position's display.
-		interruptSearch();
-		send({ cmd: 'stop' });
-		activeRequestId++;
-		analyzed = undefined;
+		abandonSearch();
 		latestUpdate = undefined;
 		lastAnalyzedIcn = icn;
 		emitNow();
@@ -545,10 +548,7 @@ function refreshAnalysis(force = false, options: RefreshAnalysisOptions = {}): v
 		cached.multiPv >= settings.multiPv &&
 		(cached.terminal || cached.depth >= currentTargetDepth)
 	) {
-		interruptSearch(); // Abort any prior slice instantly; keep the worker (and its warm hash).
-		send({ cmd: 'stop' });
-		activeRequestId++; // Drop any tail info from that stopped search.
-		analyzed = undefined;
+		abandonSearch(); // Keeps the worker (and its warm hash).
 		latestUpdate = retargetCachedUpdate(cached);
 		emitNow();
 		lastAnalyzedIcn = icn;
@@ -602,12 +602,9 @@ function computeBlockReason(gamefile: GameFile): EngineSupportCode | undefined {
 
 /** Stops the engine and marks the viewed position un-analyzable, for the given `reason`. */
 function blockAnalysis(reason: EngineSupportCode): void {
-	interruptSearch();
-	send({ cmd: 'stop' });
+	abandonSearch();
 	blockReason = reason;
 	goDeeperActive = false;
-	analyzed = undefined;
-	activeRequestId++;
 	lastAnalyzedIcn = undefined;
 	latestUpdate = undefined;
 	emitNow();
